@@ -17,6 +17,23 @@
 #include <SPI.h>
 #include "Utilities.h"
 
+#define pinMode(pin, mode) debug_pinMode(pin, mode)
+
+void debug_pinMode(int pin, int mode) {
+  Serial.print("pinMode(");
+  Serial.print(pin);
+  Serial.print(", ");
+  switch (mode) {
+    case INPUT: Serial.print("INPUT"); break;
+    case OUTPUT: Serial.print("OUTPUT"); break;
+    case INPUT_PULLUP: Serial.print("INPUT_PULLUP"); break;
+    case INPUT_PULLDOWN: Serial.print("INPUT_PULLDOWN"); break;
+    default: Serial.print(mode); break;
+  }
+  Serial.println(")");
+  pinMode(pin, mode); 
+}
+
 #if MCU_VARIANT == MCU_NRF52
   #if BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_OPENCOM_XL
       #define INTERFACE_SPI
