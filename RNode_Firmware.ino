@@ -261,8 +261,15 @@ void setup() {
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
-      bt_init();
+      #if BOARD_MODEL == BOARD_STATION_G2
+        Serial.println("DEBUG: Starting BLE initialization...");
+      #endif
+      bool bt_result = bt_init();
       bt_init_ran = true;
+      #if BOARD_MODEL == BOARD_STATION_G2
+        Serial.print("DEBUG: bt_init() result=");
+        Serial.println(bt_result);
+      #endif
     #endif
 
     if (console_active) {
@@ -507,7 +514,19 @@ void ISR_VECT receive_callback(int packet_size) {
 bool startRadio() {
   update_radio_lock();
   if (!radio_online && !console_active) {
-    if (!radio_locked && hw_ready) {
+    // Debug: Print state for Station G2 troubleshooting
+    #if BOARD_MODEL == BOARD_STATION_G2
+      Serial.print("DEBUG: startRadio() - radio_locked=");
+      Serial.print(radio_locked);
+      Serial.print(", hw_ready=");
+      Serial.println(hw_ready);
+    #endif
+    // Temporary: bypass hw_ready check for Station G2 to test radio functionality
+    #if BOARD_MODEL == BOARD_STATION_G2
+      if (!radio_locked) {
+    #else
+      if (!radio_locked && hw_ready) {
+    #endif
       if (!LoRa->begin(lora_freq)) {
         // The radio could not be started.
         // Indicate this failure over both the
@@ -1505,8 +1524,14 @@ void validate_status() {
             #if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
               if (device_init()) {
                 hw_ready = true;
+                #if BOARD_MODEL == BOARD_STATION_G2
+                  Serial.println("DEBUG: device_init() succeeded, hw_ready=true");
+                #endif
               } else {
                 hw_ready = false;
+                #if BOARD_MODEL == BOARD_STATION_G2
+                  Serial.println("DEBUG: device_init() FAILED, hw_ready=false");
+                #endif
               }
             #else
               hw_ready = true;

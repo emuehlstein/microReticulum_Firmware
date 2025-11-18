@@ -114,6 +114,10 @@
   #define MODEL_11            0x11 // RAK4631, 433 Mhz
   #define MODEL_12            0x12 // RAK4631, 868 Mhz
 
+  #define PRODUCT_STATION_G2  0x60 // Station G2 devices
+  #define BOARD_STATION_G2    0x61 // Station G2
+  #define MODEL_62            0x62 // Station G2, 915 MHz
+
   #define PRODUCT_HMBRW       0xF0
   #define BOARD_HMBRW         0x32
   #define BOARD_HUZZAH32      0x34
@@ -702,6 +706,66 @@
           const int pin_led_tx = 48;
         #endif
       #endif
+
+    #elif BOARD_MODEL == BOARD_STATION_G2
+      #define IS_ESP32S3 true
+      #define MODEM SX1262
+      #define DIO2_AS_RF_SWITCH true
+      #define HAS_BUSY true
+      #define HAS_TCXO true
+      #define OCP_TUNED 0x18
+
+      #define HAS_DISPLAY true
+      #define HAS_WIFI true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_PMU false
+      #define HAS_CONSOLE true
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_EEPROM true
+
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define HAS_LORA_PA true
+      #define HAS_LORA_LNA true
+      #define PIN_WAKEUP GPIO_NUM_38
+      #define WAKEUP_LEVEL 0
+
+      #define I2C_SCL 6
+      #define I2C_SDA 5
+
+      const int pin_btn_usr1 = 38;
+
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 9;
+        const int pin_led_tx = 8;
+      #else
+        const int pin_led_rx = 9;
+        const int pin_led_tx = 8;
+      #endif
+
+      // PA/LNA configuration
+      #define LORA_LNA_GAIN 19  // Typical 18.5 dB gain, rounded up
+      #define LORA_PA_PWR_EN -1  // No GPIO control pin identified yet
+      #define LORA_PA_CSD -1     // No GPIO control pin identified yet  
+      #define LORA_PA_CPS -1     // No GPIO control pin identified yet
+
+      // PA gain curve based on Station G2 conduction test data (US915)
+      // Covers SX1262 output range from -9 to +22 dBm (32 points)
+      #define PA_MAX_OUTPUT 37
+      #define PA_GAIN_POINTS 32  
+      #define PA_GAIN_VALUES 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 19, 19, 18, 18, 18, 17, 17
+
+      // SX1262 pins
+      const int pin_cs = 11;
+      const int pin_busy = 47;
+      const int pin_dio = 48;
+      const int pin_reset = 21;
+      const int pin_mosi = 13;
+      const int pin_miso = 14;
+      const int pin_sclk = 12;
+      const int pin_tcxo_enable = -1;
 
     #else
       #error An unsupported ESP32 board was selected. Cannot compile RNode firmware.
