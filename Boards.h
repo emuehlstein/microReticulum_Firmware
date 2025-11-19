@@ -748,6 +748,7 @@
 
       // PA/LNA configuration
       #define LORA_LNA_GAIN 19  // Typical 18.5 dB gain, rounded up
+      #define LORA_LNA_GVT  12  // LNA gain variance threshold for noise floor calculations
       #define LORA_PA_PWR_EN -1  // No GPIO control pin identified yet
       #define LORA_PA_CSD -1     // No GPIO control pin identified yet  
       #define LORA_PA_CPS -1     // No GPIO control pin identified yet
