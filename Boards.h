@@ -116,6 +116,11 @@
   #define MODEL_11            0x11 // RAK4631, 433 Mhz
   #define MODEL_12            0x12 // RAK4631, 868 Mhz
 
+  #define PRODUCT_THINKNODE_M6  0x20 // Elecrow ThinkNode M6
+  #define BOARD_THINKNODE_M6    0x52
+  #define MODEL_M6_US           0x21 // ThinkNode M6, 915 MHz
+  #define MODEL_M6_EU           0x22 // ThinkNode M6, 868 MHz
+
   #define PRODUCT_HMBRW       0xF0
   #define BOARD_HMBRW         0x32
   #define BOARD_HUZZAH32      0x34
@@ -777,6 +782,48 @@
       const int pin_led_rx = LED_BLUE;
       const int pin_led_tx = LED_GREEN;
       const int pin_tcxo_enable = -1;
+
+    #elif BOARD_MODEL == BOARD_THINKNODE_M6
+      // Elecrow ThinkNode M6: nRF52840 + SX1262 + L76K GPS, solar-powered outdoor node
+      #define _PINNUM(port, pin) ((port) * 32 + (pin))
+      #define MODEM SX1262
+      #define HAS_EEPROM false
+      #define HAS_DISPLAY false
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_CONSOLE false
+      #define HAS_PMU false
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_TCXO true              // DIO3 drives TCXO @ 3.3V
+      #define HAS_RF_SWITCH_RX_TX false
+      #define HAS_BUSY true
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define DIO2_AS_RF_SWITCH true     // SX126X_DIO2_AS_RF_SWITCH
+      #define CONFIG_UART_BUFFER_SIZE 6144
+      #define CONFIG_QUEUE_SIZE 6144
+      #define CONFIG_QUEUE_MAX_LENGTH 200
+      #define EEPROM_SIZE 296
+      #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+      #define BLE_MANUFACTURER "Elecrow"
+      #define BLE_MODEL "ThinkNode M6"
+
+      // SX1262 SPI + control pins (P1.xx = _PINNUM(1,xx))
+      const int pin_cs      = _PINNUM(1, 12); // P1.12 = 44
+      const int pin_reset   = _PINNUM(1, 10); // P1.10 = 42
+      const int pin_dio     = _PINNUM(1, 6);  // P1.06 = 38 (DIO1 / IRQ)
+      const int pin_busy    = _PINNUM(1, 11); // P1.11 = 43
+      const int pin_sclk    = _PINNUM(1, 13); // P1.13 = 45
+      const int pin_mosi    = _PINNUM(1, 14); // P1.14 = 46
+      const int pin_miso    = _PINNUM(1, 15); // P1.15 = 47
+      const int pin_rxen    = -1;             // DIO2 used as RF switch (hardware)
+      const int pin_txen    = -1;
+      const int pin_tcxo_enable = -1;         // DIO3 auto-manages TCXO in SX1262 driver
+
+      // LEDs: use DATA/blue LED for RX+TX indication
+      const int pin_led_rx  = LED_PAIRING;    // P0.07
+      const int pin_led_tx  = LED_PAIRING;    // P0.07
 
     #elif BOARD_MODEL == BOARD_TECHO
       #define _PINNUM(port, pin) ((port) * 32 + (pin))
