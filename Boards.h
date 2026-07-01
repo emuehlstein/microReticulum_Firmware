@@ -116,10 +116,10 @@
   #define MODEL_11            0x11 // RAK4631, 433 Mhz
   #define MODEL_12            0x12 // RAK4631, 868 Mhz
 
-  #define PRODUCT_THINKNODE_M6  0x16 // Elecrow ThinkNode M6 (fork-local; 0x20 taken by OPENCOM_XL in upstream rnodeconf)
-  #define BOARD_THINKNODE_M6    0x52 // free in upstream rnodeconf
-  #define MODEL_M6_US           0x18 // ThinkNode M6, 915 MHz
-  #define MODEL_M6_EU           0x19 // ThinkNode M6, 868 MHz
+  #define PRODUCT_THINKNODE_M6  0x1A // Elecrow ThinkNode M6 — matches emuehlstein/Reticulum rnodeconf
+  #define BOARD_THINKNODE_M6    0x52 // matches emuehlstein/Reticulum rnodeconf
+  #define MODEL_M6_US           0x19 // ThinkNode M6, 902-928 MHz
+  #define MODEL_M6_EU           0x18 // ThinkNode M6, 863-928 MHz
 
   #define PRODUCT_HMBRW       0xF0
   #define BOARD_HMBRW         0x32

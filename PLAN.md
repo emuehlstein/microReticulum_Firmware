@@ -137,10 +137,10 @@ Upstream `0x20` is already taken (`PRODUCT_OPENCOM_XL`). Using these free IDs:
 
 | Symbol | Value | Notes |
 |--------|-------|-------|
-| `PRODUCT_THINKNODE_M6` | `0x16` | free between TECHO(0x15) and OPENCOM_XL(0x20) |
-| `BOARD_THINKNODE_M6` | `0x52` | free; RAK4631 is 0x51 |
-| `MODEL_M6_US` | `0x18` | 902-928 MHz, 22 dBm |
-| `MODEL_M6_EU` | `0x19` | 863-928 MHz, 22 dBm |
+| `PRODUCT_THINKNODE_M6` | `0x1A` | free; TECHO=0x15, OPENCOM_XL=0x20, 0x16/0x17 used by T-Echo models |
+| `BOARD_THINKNODE_M6` | `0x52` | free; RAK4631=0x51, 0x52 is in KISS class (different namespace, no collision) |
+| `MODEL_M6_EU` | `0x18` | 863-928 MHz, 22 dBm |
+| `MODEL_M6_US` | `0x19` | 902-928 MHz, 22 dBm |
 
 **Note:** If/when upstreaming to markqvist/Reticulum, coordinate ID assignments with maintainers first.
 
@@ -148,10 +148,9 @@ Upstream `0x20` is already taken (`PRODUCT_OPENCOM_XL`). Using these free IDs:
 
 **1. `ROM` class — add constants** (near line 203, after TECHO block):
 ```python
-PRODUCT_THINKNODE_M6 = 0x16
-MODEL_M6_US          = 0x18  # ThinkNode M6, 902-928 MHz
-MODEL_M6_EU          = 0x19  # ThinkNode M6, 863-928 MHz
-
+PRODUCT_THINKNODE_M6 = 0x1A  # Elecrow ThinkNode M6
+MODEL_M6_EU          = 0x18  # ThinkNode M6, 863-928 MHz
+MODEL_M6_US          = 0x19  # ThinkNode M6, 902-928 MHz
 BOARD_THINKNODE_M6   = 0x52
 ```
 
