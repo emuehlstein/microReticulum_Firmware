@@ -817,7 +817,7 @@ void sx126x::enableTCXO() {
       if (_tcxoVoltageOverride != 0xFF) {
         mode = _tcxoVoltageOverride;
       } else {
-        #if BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_XIAO_S3
+        #if BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_XIAO_S3 || BOARD_MODEL == BOARD_THINKNODE_M6
           mode = MODE_TCXO_3_3V_6X;
         #elif BOARD_MODEL == BOARD_TBEAM
           mode = MODE_TCXO_1_8V_6X;

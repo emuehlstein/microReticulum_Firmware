@@ -825,6 +825,9 @@
       const int pin_led_rx  = LED_PAIRING;    // P0.07
       const int pin_led_tx  = LED_PAIRING;    // P0.07
 
+      // User button (multifunction / power) on P0.17
+      const int pin_btn_usr1 = 17;            // P0.17
+
     #elif BOARD_MODEL == BOARD_TECHO
       #define _PINNUM(port, pin) ((port) * 32 + (pin))
       #define MODEM SX1262

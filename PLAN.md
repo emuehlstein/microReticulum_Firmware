@@ -86,21 +86,66 @@ NFC2               P0.10  (avoid as GPIO)
 
 ## TODO — Ordered by Priority
 
-### P0: Build validation
-- [ ] Install PlatformIO, run `pio run -e thinknode_m6` — expect clean compile
-- [ ] Fix any symbol conflicts or missing #ifdef guards that surface from compile
-- [ ] Check `Boards.h` nRF52 `#else` error guard doesn't catch M6 (add `|| BOARD_MODEL == BOARD_THINKNODE_M6` to any existing nRF52 `#if` chains)
+### P0: Build validation — DONE
+- [x] `pio run -e thinknode_m6` — clean compile (RAM 18.1%, Flash 84.1% / 685 KB of 815 KB)
+- [x] Fixed symbol conflicts / missing guards that surfaced from compile:
+  - `platformio.ini`: added `custom_variant = thinknode_m6` (required by `extra_script.py` for PROGNAME)
+  - `platformio.ini`: removed `-DMCU_VARIANT=MCU_NRF52` — it bypassed the `#ifndef MCU_VARIANT` auto-detect block in `Boards.h` that sets `PLATFORM PLATFORM_NRF52` and includes `<variant.h>`. Now auto-detected via `NRF52840_XXAA` like techo/rak.
+  - `variants/thinknode_m6/variant.h`: added `static const uint8_t SS/MOSI/MISO/SCK` aliases (SdFat needs `SS`)
+  - `variants/thinknode_m6/variant.h`: added `PIN_LED1/PIN_LED2/LED_BUILTIN/LED_CONN/LED_RED/LED_BLUE` aliases (InternalFS `flash_cache.c` needs `LED_BUILTIN`)
+  - `Boards.h`: added `const int pin_btn_usr1 = 17;` to M6 block (Input.h needs it)
+  - `Utilities.h`: added `BOARD_THINKNODE_M6` LED branch (active-HIGH `led_rx/tx_on/off`)
+  - `platformio.ini`: added `lib_archive = no` (required so the linker pulls TinyUSB's strong `TinyUSB_Device_Init()`; without it USB CDC never inits and no serial port enumerates)
+  - `platformio.ini`: dropped external QSPI flash for now (`USTORE_USE_FLASHFS`, `SdFat`, `Adafruit_SPIFlash#littlefs`) — the bundled littlefs collided with the core's `Adafruit_LittleFS` once `lib_archive = no` was set. Internal FS only, matching the working T-Echo env. External flash is P5.
+  - `Boards.h`: aligned M6 IDs to the patched rnodeconf — `PRODUCT_THINKNODE_M6 0x1A`, `MODEL_M6_US 0x19`, `MODEL_M6_EU 0x18` (the old `0x20/0x21` clashed with rnodeconf's openCom XL product/model). `BOARD 0x52` unchanged.
 
-### P1: Flash and basic RNode behavior
-- [ ] Flash via DFU (`pio run -e thinknode_m6 -t upload`) — double-tap RESET first
-- [ ] Connect `rnodeconf` and verify device identifies as a valid RNode
-- [ ] Confirm LoRa RX/TX LED blink on air traffic (use `--check` or `--frequency 915000000 --bw 125000 --sf 8 --cr 5 --txp 17`)
-- [ ] Verify BLE advertising shows "ThinkNode M6"
+### P1: Flash and basic RNode behavior — DONE
+- [x] Flashed via DFU (`pio run -e thinknode_m6 -t upload`) — device programmed
+- [x] `rnodeconf -i` identifies device: fw 1.86, SX1262, mode Normal
+- [x] Provisioned EEPROM (US band) with patched rnodeconf: `rnodeconf -r --product 1a --model 19 --hwrev 1 <port>` — signature validated, reports "Elecrow ThinkNode M6 902-928 MHz (1a:19:52)", max TX 22 dBm
+- [x] LoRa modem confirmed: `rnodeconf -T --freq 915000000 --bw 125000 --sf 8 --cr 5 --txp 17` — radio **reads back** 915 MHz / BW 125 kHz / 17 dBm / SF8 / CR5 and enters TNC mode. Confirms SX1262 SPI wiring (CS/SCK/MOSI/MISO/BUSY/RESET/DIO1) works.
+- [x] BLE confirmed: `rnodeconf -b` enables Bluetooth (config re-read shows `Bluetooth: Enabled`); OTA scan shows the device advertising as `RNode XXXX`.
+  - NOTE: the PLAN's original wording was wrong — the **advertised name** is `RNode XXXX` (standard RNode convention, from MAC+signature hash, `Bluetooth.h`), while `BLE_MODEL "ThinkNode M6"` / `BLE_MANUFACTURER "Elecrow"` are exposed as the **Device Information Service** Model/Manufacturer characteristics (`bledis.setModel/setManufacturer`). GATT reads require pairing (MITM passkey), so this is by design.
+  - Positive single-device OTA ID was inconclusive (two other RNodes were in range and BT-enable applies on the next boot); not a firmware issue.
+- [x] Intermittency note: the first `rnodeconf` connect after an idle period sometimes prints "RNode did not respond" because opening the CDC port toggles DTR and resets the nRF52; a second invocation always succeeds.
 
-### P2: Transport node (embedded RNS)
-- [ ] Switch to TNC mode: `rnodeconf --tnc --freq 910525000 --bw 62500 --sf 7 --cr 5 --txp 17 /dev/ttyACMx`
-- [ ] Observe serial log — should show "TRANSPORT" in AirTime panel log
-- [ ] Confirm packet routing with another RNS node on Chicago freq (910.525 MHz / BW 62.5 / SF7 / CR5)
+### P1 status: DONE — device flashes, provisions, brings up the SX1262 radio, and advertises over BLE.
+
+### P2: Transport node (embedded RNS) — RADIO ONLINE + TNC PERSISTS ✅
+Target config (US/Chicago-ish): freq=914875000 bw=125000 txp=22 sf=8 cr=5
+Command: `python3 -m RNS.Utilities.rnodeconf -T --freq 914875000 --bw 125000 --sf 8 --cr 5 --txp 22 <port> < /dev/null`
+Verified `-i` shows `Device mode: TNC` with all values + On-air bitrate 3.12 kbps.
+
+**This was the hard part. The SX1262 wouldn't come online — `eeprom_conf_save()` silently no-oped
+(guard `if (hw_ready && radio_online)`), so TNC config never persisted (all CONF_* bytes = 0).
+Root cause was THREE separate M6 bugs stacked on top of each other, uncovered one at a time via
+serial boot logs + a custom KISS `radio_online` probe (`/tmp/radio_probe.py`):**
+
+1. **EEPROM config rejected** — `Utilities.h` `eeprom_product_valid()` (PLATFORM_NRF52 branch) and
+   `eeprom_model_valid()` had no `PRODUCT_THINKNODE_M6` / `BOARD_THINKNODE_M6` case → boot printed
+   "Invalid EEPROM configuration" → `hw_ready=false`. FIXED: added M6 to both.
+2. **SX1262 never reset before probe** — `setPins()` only stores pin numbers; nothing drives NRESET,
+   and the standalone `preInit()` in `setup()` (unlike `begin()`) doesn't reset. Boot printed
+   "No radio module found" (sync read failed). FIXED: added `LoRa->reset()` before preInit for the M6
+   in `RNode_Firmware.ino` (mirrors T3S3/XIAO_S3). Confirmed via temp debug: `preInit OK sync=0x1424`.
+3. **Firmware hash never written** — `hw_ready` also needs `fw_signature_validated`, which compares the
+   device's computed flash hash to `dev_firmware_hash_target` in EEPROM. That target is written by the
+   `pio upload` post-step `rnodeconf --firmware-hash`, which **failed every time** on the first-connect
+   race → mismatch → `fw_signature_validated=false` → `hw_ready=false`. FIXED (operational): set it
+   manually with retries: `rnodeconf --firmware-hash $(shasum -a256 .pio/build/thinknode_m6/*.bin) <port>`.
+   (Also fixed a latent bug: `sx126x.cpp enableTCXO()` left `mode` UNINITIALIZED for the M6 → garbage
+   TCXO byte; added M6 to the 3.3V case.)
+
+Also fixed in patched rnodeconf (Reticulum repo):
+- TNC `--txp` ceiling was hardcoded `<= 17`; changed to `<= rnode.max_output` (M6 = 22 dBm) — it was
+  falling through to an interactive `input()` prompt and hanging.
+- `setTNCMode()`: added 10s emulated-EEPROM settle for RAK4631/M6.
+
+TODO still open for P2:
+- [ ] Observe serial log — should show "TRANSPORT" once transport mode enabled (currently "Transport mode is disabled")
+- [ ] Confirm packet routing with another RNS node
+- [x] CLEANUP DONE: removed temp `[M6] preInit` debug print; rebuilt, reflashed clean .bin, re-set
+      firmware-hash (`ab4babef…`), reset — verified boots into `Device mode: TNC` (914.875/125k/22/8/5).
 
 ### P3: GPS integration
 - [ ] GPS is not part of the base RNode firmware; this is an extension point

@@ -608,6 +608,16 @@ void setup() {
       delay(100);
     #endif
 
+    #if BOARD_MODEL == BOARD_THINKNODE_M6
+      // setPins() only stores the pin numbers — nothing drives the SX1262
+      // NRESET line before the standalone preInit() probe below, so pulse
+      // it explicitly. Without this the chip can be stuck in/after reset
+      // and preInit()'s sync-word read fails ("No radio module found").
+      delay(10);
+      LoRa->reset();
+      delay(10);
+    #endif
+
     // Check installed transceiver chip and
     // probe boot parameters.
     #if MCU_VARIANT == MCU_NATIVE

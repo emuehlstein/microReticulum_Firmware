@@ -42,6 +42,14 @@ extern "C" {
 #define LED_STATE_OFF  LOW
 // No LED_BLUE equivalent mapped separately; use LED_PAIRING for RX/TX indication
 
+// Arduino/BSP standard LED aliases (required by the nRF52 core & InternalFS)
+#define PIN_LED1       LED_POWER
+#define PIN_LED2       LED_PAIRING
+#define LED_BUILTIN    PIN_LED1
+#define LED_CONN       PIN_LED2
+#define LED_RED        LED_POWER
+#define LED_BLUE       LED_PAIRING
+
 // --- USB power detect ---
 #define EXT_PWR_DETECT (13)    // P0.13
 
@@ -132,6 +140,11 @@ static const uint8_t A0 = PIN_A0;
 #define PIN_SPI_MISO  (32 + 15)  // P1.15 = 47
 #define PIN_SPI_MOSI  (32 + 14)  // P1.14 = 46
 #define PIN_SPI_SCK   (32 + 13)  // P1.13 = 45
+
+static const uint8_t SS   = (32 + 12);  // SX1262_CS P1.12 = 44
+static const uint8_t MOSI = PIN_SPI_MOSI;
+static const uint8_t MISO = PIN_SPI_MISO;
+static const uint8_t SCK  = PIN_SPI_SCK;
 
 // --- RTC ---
 // PCF8563 at I2C address 0x51 — shares I2C bus
