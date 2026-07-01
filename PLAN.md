@@ -127,6 +127,112 @@ NFC2               P0.10  (avoid as GPIO)
 
 ---
 
+## rnodeconf / Reticulum package changes
+
+`rnodeconf` is the tool that provisions EEPROM, validates firmware hashes, and manages autoinstall. It lives in the `markqvist/Reticulum` repo at `RNS/Utilities/rnodeconf.py`. For the ThinkNode M6 to be recognized and provisionable, changes are needed there (or in a fork).
+
+### ID assignments (fork-local)
+
+Upstream `0x20` is already taken (`PRODUCT_OPENCOM_XL`). Using these free IDs:
+
+| Symbol | Value | Notes |
+|--------|-------|-------|
+| `PRODUCT_THINKNODE_M6` | `0x16` | free between TECHO(0x15) and OPENCOM_XL(0x20) |
+| `BOARD_THINKNODE_M6` | `0x52` | free; RAK4631 is 0x51 |
+| `MODEL_M6_US` | `0x18` | 902-928 MHz, 22 dBm |
+| `MODEL_M6_EU` | `0x19` | 863-928 MHz, 22 dBm |
+
+**Note:** If/when upstreaming to markqvist/Reticulum, coordinate ID assignments with maintainers first.
+
+### Changes required in `rnodeconf.py`
+
+**1. `ROM` class — add constants** (near line 203, after TECHO block):
+```python
+PRODUCT_THINKNODE_M6 = 0x16
+MODEL_M6_US          = 0x18  # ThinkNode M6, 902-928 MHz
+MODEL_M6_EU          = 0x19  # ThinkNode M6, 863-928 MHz
+
+BOARD_THINKNODE_M6   = 0x52
+```
+
+**2. `products` dict** (near line 292):
+```python
+ROM.PRODUCT_THINKNODE_M6: "Elecrow ThinkNode M6",
+```
+
+**3. `models` dict** (near line 311) — format: `[freq_min, freq_max, txpower_max, band_label, fw_filename, modem]`:
+```python
+0x18: [902000000, 928000000, 22, "902 - 928 MHz", "rnode_firmware_thinknode_m6.zip", "SX1262"],
+0x19: [863000000, 928000000, 22, "863 - 928 MHz", "rnode_firmware_thinknode_m6.zip", "SX1262"],
+```
+
+**4. `autoinstall` device selection menu** (around line 2080, after the T-Echo block):
+```python
+elif c_dev == <next_number>:
+    selected_product = ROM.PRODUCT_THINKNODE_M6
+    clear()
+    print("")
+    print("-" * 75)
+    print("              Elecrow ThinkNode M6 RNode Installer")
+    print("")
+    print("Important! Using RNode firmware on ThinkNode M6 devices should currently be")
+    print("considered experimental. It is not intended for production or critical use.")
+    print("The currently supplied firmware is provided AS-IS as a courtesy to those")
+    print("who would like to experiment with it. Hit enter to continue.")
+    print("-" * 75)
+    input()
+```
+
+**5. Band selection block** (around line 2540, after TECHO band block):
+```python
+elif selected_product == ROM.PRODUCT_THINKNODE_M6:
+    selected_mcu = ROM.MCU_NRF52
+    print("\nWhat band is this ThinkNode M6 for?\n")
+    print("[1] 868 MHz")
+    print("[2] 915 MHz")
+    print("\n? ", end="")
+    try:
+        c_model = int(input())
+        if c_model < 1 or c_model > 2:
+            raise ValueError()
+        elif c_model == 1:
+            selected_model = ROM.MODEL_M6_EU
+            selected_platform = ROM.PLATFORM_NRF52
+        elif c_model == 2:
+            selected_model = ROM.MODEL_M6_US
+            selected_platform = ROM.PLATFORM_NRF52
+    except Exception as e:
+        print("That band does not exist, exiting now.")
+        graceful_exit()
+```
+
+**6. nRF52 flash timing** (around line 988-989 — RAK4631 gets extra time):
+```python
+# Add M6 to the extra-wait set (same as RAK4631, same platform)
+if self.board == ROM.BOARD_RAK4631 or self.board == ROM.BOARD_THINKNODE_M6:
+```
+
+**7. `release.json` / firmware package**
+
+For `--autoinstall` and `--fw-url` to work, the release must include a packaged `.zip` file named `rnode_firmware_thinknode_m6.zip` with the correct structure. The attermann firmware's `release_hashes.py` and `Makefile`/`pio run -t package` handle this when you add the `thinknode_m6` env to the package target.
+
+For development/manual use you don't need any of this — just:
+```bash
+pio run -e thinknode_m6 -t upload   # flash via DFU
+rnodeconf /dev/ttyACMx --firmware-hash $(python3 nrf52_hash.py ./build/.../RNode_Firmware.ino.bin)
+```
+
+The `--firmware-hash` step writes the hash to EEPROM so the device considers its firmware valid. Without it, RNS will refuse to use the device.
+
+### Where to fork rnodeconf
+
+For a chicagooffline-local fork:
+- `markqvist/Reticulum` → fork as `emuehlstein/Reticulum`
+- Edit `RNS/Utilities/rnodeconf.py` with the changes above
+- Install locally: `pip3 install -e .` in the fork directory
+
+---
+
 ## Reference: Meshtastic variant_shutdown() pattern
 
 ```cpp
